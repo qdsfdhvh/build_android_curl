@@ -33,10 +33,11 @@ jobs:
         run: |
           sh build_android.sh
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+      - name: Upload .h and .a files
+        uses: actions/upload-artifact@v4
         with:
           name: curl-android
           path: |
-            out/include/**/*.h
-            out/lib/*.a
+            out/**/include/**/*.h
+            out/**/lib/*.a
+            out/**/lib/*.so
