@@ -33,13 +33,6 @@ jobs:
         run: |
           sh build_android.sh --arch ${{ matrix.arch }}
 
-      - name: Upload log.h
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.arch }}.log
-          path: |
-            build/**/build.log
-
       - name: Upload .h and .a files
         uses: actions/upload-artifact@v4
         with:
