@@ -18,8 +18,8 @@ if [ -z "$ANDROID_NDK_ROOT" ]; then
     exit 1
 fi
 
-# sh build_android.sh --arch=armv7
-while [[ "$#" -gt 0 ]]; do
+# sh build_android.sh --arch armv7
+while [ "$#" -gt 0 ]; do
     case $1 in
     --arch) ARCH="$2" shift ;;
     *)
