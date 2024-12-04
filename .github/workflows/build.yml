@@ -8,10 +8,6 @@ on:
       - "README.md"
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: true
-
 jobs:
   build:
     strategy:
