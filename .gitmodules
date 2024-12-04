@@ -1,6 +1,3 @@
-[submodule "boringssl"]
-	path = boringssl
-	url = https://github.com/google/boringssl
 [submodule "nghttp2"]
 	path = nghttp2
 	url = https://github.com/nghttp2/nghttp2
