@@ -1,3 +1,0 @@
-[submodule "nghttp3"]
-	path = nghttp3
-	url = https://github.com/ngtcp2/nghttp3
