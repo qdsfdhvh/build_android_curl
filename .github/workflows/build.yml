@@ -14,6 +14,10 @@ concurrency:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        arch: [armv7, arm64, x86, x86_64]
+    name: Build curl for ${{ matrix.arch }}
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -25,19 +29,27 @@ jobs:
         with:
           ndk-version: r27c
 
-      - name: Set ANDROID_NDK_ROOT Environment Variable
+      - name: Set ANDROID_NDK_ROOT Env
         run: |
           echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}"
 
       - name: Build curl
         run: |
-          sh build_android.sh
+          sh build_android.sh --arch ${{ matrix.arch }}
+
+      - name: Upload log.h
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.arch }}.log
+          path: |
+            build/**/build.log
 
       - name: Upload .h and .a files
         uses: actions/upload-artifact@v4
         with:
-          name: curl-android
+          name: curl-android-${{ matrix.arch }}
           path: |
             out/**/include/**/*.h
             out/**/lib/*.a
             out/**/lib/*.so
+
