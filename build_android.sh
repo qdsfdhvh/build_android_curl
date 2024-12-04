@@ -46,6 +46,22 @@ x86_64) ABI="x86_64" ;;
     ;;
 esac
 
+# get number of CPU cores
+
+get_cpu_cores() {
+    if command -v nproc > /dev/null; then
+        nproc
+    elif command -v sysctl > /dev/null; then
+        sysctl -n hw.ncpu
+    elif [ -f /proc/cpuinfo ]; then
+        grep -c ^processor /proc/cpuinfo
+    else
+        getconf _NPROCESSORS_ONLN
+    fi
+}
+
+CORES=$(get_cpu_cores)
+
 fail() {
     error "$@"
     exit 1
@@ -80,7 +96,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
     -DANDROID_ABI=$ABI \
     -DANDROID_PLATFORM=android-$SDK_VER "$DEPS_PATH/boringssl-$BORINGSSL_VERSION" || fail "Failed to configure boringssl"
 
-make -j$(nproc) || fail "Failed to build boringssl"
+make -j$CORES || fail "Failed to build boringssl"
 make install || fail "Failed to install boringssl"
 make clean
 
@@ -105,7 +121,8 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
     -DANDROID_PLATFORM=android-$SDK_VER \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_STATIC_LIBS=ON "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION" || fail "Failed to configure nghttp2"
-make -j$(nproc) || fail "Failed to build nghttp2"
+
+make -j$CORES || fail "Failed to build nghttp2"
 make install || fail "Failed to install nghttp2"
 make clean
 
@@ -130,7 +147,8 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
     -DANDROID_PLATFORM=android-$SDK_VER \
     -DENABLE_SHARED_LIB=OFF \
     -DENABLE_STATIC_LIB=ON "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION" || fail "Failed to configure nghttp3"
-make -j$(nproc) || fail "Failed to build nghttp3"
+
+make -j$CORES || fail "Failed to build nghttp3"
 make install || fail "Failed to install nghttp3"
 make clean
 
@@ -158,7 +176,8 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
     -DENABLE_SHARED_LIB=OFF \
     -DENABLE_STATIC_LIB=ON \
     "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION" || fail "Failed to configure ngtcp2"
-make -j$(nproc) check || fail "Failed to build ngtcp2"
+
+make -j$CORES check || fail "Failed to build ngtcp2"
 make install || fail "Failed to install ngtcp2"
 make clean
 
@@ -197,6 +216,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_STATIC_LIBS=ON \
     -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" "$DEPS_PATH/curl-$CURL_VERSION" || fail "Failed to configure curl"
-make -j$(nproc) || fail "Failed to build curl"
+
+make -j$CORES || fail "Failed to build curl"
 make install || fail "Failed to install curl"
 make clean
