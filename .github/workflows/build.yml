@@ -1,7 +1,12 @@
 name: build curl
 
 on:
-  workflow_run:
+  push:
+    tags:
+      - "v*"
+    paths-ignore:
+      - "README.md"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.run_id }}
@@ -35,4 +40,3 @@ jobs:
           path: |
             out/include/**/*.h
             out/lib/*.a
-          
