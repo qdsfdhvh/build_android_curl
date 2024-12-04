@@ -45,6 +45,10 @@ fail() {
     exit 1
 }
 
+error() {
+    echo "Error: $@" >&2
+}
+
 BUILD_PATH="$ROOT/build/$ABI"
 OUT_PATH="$ROOT/out/$ABI"
 DEPS_PATH="$ROOT/deps"
