@@ -7,12 +7,12 @@ fi
 ROOT=$PWD
 SDK_VER=23
 
-# Uncomment a set of variables to compile for 32bit or 64bit
-
 if [ -z "$ANDROID_NDK_ROOT" ]; then
     echo "ANDROID_NDK_ROOT is not set"
     exit 1
 fi
+
+# Uncomment a set of variables to compile for 32bit or 64bit
 
 #ABI="armeabi-v7a"
 #BUILD_PATH="$ROOT/build/android32"
@@ -21,10 +21,11 @@ fi
 ABI="arm64-v8a"
 BUILD_PATH="$ROOT/build/android64"
 OUT_PATH="$ROOT/out/android64"
+
 DEPS_PATH="$ROOT/deps"
 
 BORINGSSL_VERSION="0.20241203.0"
-NGHTTP2_VERSION="v1.64.0"
+NGHTTP2_VERSION="1.64.0"
 NGTCP2_VERSION="1.9.1"
 NGHTTP3_VERSION="1.6.0"
 CURL_VERSION="8.11.0"
@@ -43,31 +44,39 @@ rm -rf "$BUILD_PATH/boringssl"
 mkdir -p "$BUILD_PATH/boringssl"
 cd "$BUILD_PATH/boringssl"
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$SDK_VER "$DEPS_PATH/boringssl-$BORINGSSL_VERSION"
+    -DANDROID_ABI=$ABI \
+    -DANDROID_PLATFORM=android-$SDK_VER "$DEPS_PATH/boringssl-$BORINGSSL_VERSION"
 make -j$(nproc)
 make install
 make clean
 
-
 # Build nghttp2
 
 if [ ! -d "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION" ]; then
-    git clone --branch $NGHTTP2_VERSION --single-branch --depth 1 https://github.com/nghttp2/nghttp2 "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
+    curl -L https://github.com/nghttp2/nghttp2/releases/download/v$NGHTTP2_VERSION/nghttp2-$NGHTTP2_VERSION.tar.gz -o "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz"
+    tar -xvf "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz" -C "$DEPS_PATH"
+    rm "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz"
 fi
 
 rm -rf "$BUILD_PATH/nghttp2"
 mkdir -p "$BUILD_PATH/nghttp2"
 cd "$BUILD_PATH/nghttp2"
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" -DENABLE_LIB_ONLY=ON -DENABLE_EXAMPLES=OFF \
-    -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" -DANDROID_ABI=$ABI \
-    -DANDROID_PLATFORM=android-$SDK_VER -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
+    -DENABLE_LIB_ONLY=ON \
+    -DENABLE_EXAMPLES=OFF \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI=$ABI \
+    -DANDROID_PLATFORM=android-$SDK_VER \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DBUILD_STATIC_LIBS=ON "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
 make -j$(nproc)
 make install
 make clean
-
 
 # Build nghttp3
 
@@ -81,13 +90,18 @@ rm -rf "$BUILD_PATH/nghttp3"
 mkdir -p "$BUILD_PATH/nghttp3"
 cd "$BUILD_PATH/nghttp3"
 
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" -DENABLE_LIB_ONLY=ON -DENABLE_EXAMPLES=OFF \
-    -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" -DANDROID_ABI=$ABI \
-    -DANDROID_PLATFORM=android-$SDK_VER -DENABLE_SHARED_LIB=OFF -DENABLE_STATIC_LIB=ON "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION"
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
+    -DENABLE_LIB_ONLY=ON \
+    -DENABLE_EXAMPLES=OFF \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+    -DANDROID_ABI=$ABI \
+    -DANDROID_PLATFORM=android-$SDK_VER \
+    -DENABLE_SHARED_LIB=OFF \
+    -DENABLE_STATIC_LIB=ON "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION"
 make -j$(nproc)
 make install
 make clean
-
 
 # Build ngtcp2
 
@@ -116,7 +130,6 @@ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
 make -j$(nproc) check
 make install
 make clean
-
 
 # Build curl
 
