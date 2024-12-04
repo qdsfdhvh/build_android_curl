@@ -58,7 +58,8 @@ LOG_FILE="$BUILD_PATH/build.log"
 # Remove previous output files
 
 rm -rf "$OUT_PATH"
-mkdir -p "$OUT_PATH"
+
+mkdir -p "$BUILD_PATH"
 touch "$LOG_FILE"
 
 # Build BoringSSL
