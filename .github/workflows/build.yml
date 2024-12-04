@@ -14,10 +14,15 @@ jobs:
       matrix:
         arch: [armv7, arm64, x86, x86_64]
     name: Build curl for ${{ matrix.arch }}
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Install Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
@@ -41,4 +46,3 @@ jobs:
             out/**/include/**/*.h
             out/**/lib/*.a
             out/**/lib/*.so
-
