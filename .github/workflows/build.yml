@@ -1,0 +1,38 @@
+name: build curl
+
+on:
+  workflow_run:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+
+      - name: Set ANDROID_NDK_ROOT Environment Variable
+        run: |
+          echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}"
+
+      - name: Build curl
+        run: |
+          sh build_android.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: curl-android
+          path: |
+            out/include/**/*.h
+            out/lib/*.a
+          
