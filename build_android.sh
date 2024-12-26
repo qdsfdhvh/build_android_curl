@@ -5,8 +5,10 @@ if [ -f .env ]; then
 fi
 
 ROOT=$PWD
-SDK_VER=26
+SDK_VER=21
 
+ZLIB_VERSION="1.3.1"
+PSL_VERSION="0.21.5"
 BORINGSSL_VERSION="0.20241209.0"
 NGHTTP2_VERSION="1.64.0"
 NGHTTP3_VERSION="1.7.0"
@@ -87,15 +89,16 @@ error() {
 # 配置 NDK 工具链
 
 case "$(uname -s)" in
-Darwin) NDK_PLATFORM=darwin-x86_64 ;;
-Linux) NDK_PLATFORM=linux-x86_64 ;;
+Darwin) export HOST_TAG=darwin-x86_64 ;;
+Linux) export HOST_TAG=linux-x86_64 ;;
 *)
     echo "Unknown platform: $(uname -s)"
     exit 1
     ;;
 esac
 
-export TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$NDK_PLATFORM"
+export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
+export TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
 
 export PATH="$TOOLCHAIN/bin:$PATH"
 export PATH="$ANDROID_NDK_ROOT/prebuilt/$NDK_PLATFORM/bin:$PATH"
@@ -128,10 +131,43 @@ echo "========================================"
 
 OUT_PATH="$ROOT/out/$ABI"
 DEPS_PATH="$ROOT/deps"
+MESON_PATH="$ROOT/meson"
 
 # 删除旧 out 路径
 
 rm -rf "$OUT_PATH"
+
+# Build zlib
+
+if [ ! -d "$DEPS_PATH/zlib-$ZLIB_VERSION" ]; then
+    curl -L https://zlib.net/zlib-$ZLIB_VERSION.tar.gz -o "$DEPS_PATH/zlib-$ZLIB_VERSION.tar.gz" || fail "Failed to download zlib"
+    tar -xvf "$DEPS_PATH/zlib-$ZLIB_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract zlib"
+    rm "$DEPS_PATH/zlib-$ZLIB_VERSION.tar.gz"
+fi
+
+cd "$DEPS_PATH/zlib-$ZLIB_VERSION"
+
+CHOST=$HOST ./configure --prefix="$OUT_PATH" || fail "Failed to configure zlib"
+
+make clean
+make -j$CORES || fail "Failed to build zlib"
+make install || fail "Failed to install zlib"
+
+# Build psl
+
+if [ ! -d "$DEPS_PATH/libpsl-$PSL_VERSION" ]; then
+    curl -L https://github.com/rockdaboot/libpsl/releases/download/$PSL_VERSION/libpsl-$PSL_VERSION.tar.gz -o "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to download psl"
+    tar -zxf "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract psl"
+    rm "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to remove psl"
+fi
+
+cd "$DEPS_PATH/libpsl-$PSL_VERSION"
+
+meson setup --prefix="$OUT_PATH" --buildtype=release --cross-file "$MESON_PATH/$HOST.txt" build || fail "Failed to configure psl"
+
+ninja -C build clean
+ninja -C build -j$CORES || fail "Failed to build psl"
+ninja -C build install || fail "Failed to install psl"
 
 # Build boringssl
 
@@ -148,6 +184,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=$ABI \
     -DANDROID_PLATFORM=android-$SDK_VER \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=on \
     -GNinja -B build || fail "Failed to configure boringssl"
 
 ninja -C build clean
@@ -240,18 +277,15 @@ cd "$BUILD_PATH/curl"
 
 ./configure --prefix="$OUT_PATH" \
     --host=$HOST \
+    --with-zlib="$OUT_PATH" \
+    --with-libpsl="$OUT_PATH" \
     --with-ssl="$OUT_PATH" \
     --with-nghttp2="$OUT_PATH" \
     --with-nghttp3="$OUT_PATH" \
     --with-ngtcp2="$OUT_PATH" \
+    --with-ca-bundle="/system/etc/security/cacert.pem" \
     --with-ca-path="/system/etc/security/cacerts" \
-    --enable-alt-svc \
-    --enable-ipv6 \
-    --enable-threaded-resolver \
-    --enable-hidden-symbols \
-    --enable-optimize \
-    --disable-versioned-symbols \
-    --disable-manual \
+    --with-pic \
     --disable-shared || fail "Failed to configure curl"
 
 make clean

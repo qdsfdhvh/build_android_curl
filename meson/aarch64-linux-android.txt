@@ -1,0 +1,5 @@
+[host_machine]
+system = 'aarch64-linux-android'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'

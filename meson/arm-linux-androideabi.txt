@@ -1,0 +1,5 @@
+[host_machine]
+system = 'arm-linux-androideabi'
+cpu_family = 'armv7a'
+cpu = 'armv7a'
+endian = 'little'
