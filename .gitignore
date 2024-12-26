@@ -2,3 +2,4 @@ build/
 out/
 deps/
 .env
+.DS_Store
