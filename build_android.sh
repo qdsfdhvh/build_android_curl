@@ -133,6 +133,10 @@ OUT_PATH="$ROOT/out/$ABI"
 DEPS_PATH="$ROOT/deps"
 MESON_PATH="$ROOT/meson"
 
+# 尝试创建依赖目录
+
+mkdir -p $DEPS_PATH
+
 # 删除旧 out 路径
 
 rm -rf "$OUT_PATH"
