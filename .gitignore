@@ -3,4 +3,4 @@ out/
 deps/
 .env
 .DS_Store
-version.txt
+**/version.txt

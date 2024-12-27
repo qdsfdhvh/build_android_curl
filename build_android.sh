@@ -5,13 +5,10 @@ if [ -f .env ]; then
 fi
 
 ROOT=$PWD
-SDK_VER=21
+SDK_VER=24
 
 ZLIB_VERSION="1.3.1"
-BORINGSSL_VERSION="0.20241209.0"
-NGHTTP2_VERSION="1.64.0"
-NGHTTP3_VERSION="1.7.0"
-NGTCP2_VERSION="1.9.1"
+OPENSSL_VERSION="3.4.0"
 CURL_VERSION="8.11.1"
 
 if [ -z "$ANDROID_NDK_ROOT" ]; then
@@ -96,7 +93,6 @@ Linux) export HOST_TAG=linux-x86_64 ;;
     ;;
 esac
 
-export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
 export TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
 
 export PATH="$TOOLCHAIN/bin:$PATH"
@@ -130,7 +126,6 @@ echo "========================================"
 
 OUT_PATH="$ROOT/out/$ABI"
 DEPS_PATH="$ROOT/deps"
-MESON_PATH="$ROOT/meson"
 
 # 尝试创建依赖目录
 
@@ -151,110 +146,30 @@ fi
 cd "$DEPS_PATH/zlib-$ZLIB_VERSION"
 
 export CHOST=$HOST
-./configure --prefix="$OUT_PATH" || fail "Failed to configure zlib"
+./configure --prefix="$OUT_PATH" --static || fail "Failed to configure zlib"
 
 make clean
 make -j$CORES || fail "Failed to build zlib"
 make install || fail "Failed to install zlib"
 
-# Build boringssl
+# Build openssl
 
-if [ ! -d "$DEPS_PATH/boringssl-$BORINGSSL_VERSION" ]; then
-    curl -L https://github.com/google/boringssl/releases/download/$BORINGSSL_VERSION/boringssl-$BORINGSSL_VERSION.tar.gz -o "$DEPS_PATH/boringssl-$BORINGSSL_VERSION.tar.gz" || fail "Failed to download boringssl"
-    tar -xvf "$DEPS_PATH/boringssl-$BORINGSSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract boringssl"
-    rm "$DEPS_PATH/boringssl-$BORINGSSL_VERSION.tar.gz"
+if [ ! -d "$DEPS_PATH/openssl-$OPENSSL_VERSION" ]; then
+    curl -L https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz -o "$DEPS_PATH/openssl-$OPENSSL_VERSION.tar.gz" || fail "Failed to download openssl"
+    tar -xvf "$DEPS_PATH/openssl-$OPENSSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract openssl"
+    rm "$DEPS_PATH/openssl-$OPENSSL_VERSION.tar.gz"
 fi
 
-cd "$DEPS_PATH/boringssl-$BORINGSSL_VERSION"
+cd "$DEPS_PATH/openssl-$OPENSSL_VERSION"
 
-cmake -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$OUT_PATH" \
-    -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
-    -DANDROID_ABI=$ABI \
-    -DANDROID_PLATFORM=android-$SDK_VER \
-    -DBUILD_SHARED_LIBS=ON \
-    -GNinja -B build || fail "Failed to configure boringssl"
-
-ninja -C build clean
-ninja -C build -j$CORES || fail "Failed to build boringssl"
-ninja -C build install || fail "Failed to install boringssl"
-
-# Build nghttp2
-
-if [ ! -d "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION" ]; then
-    curl -L https://github.com/nghttp2/nghttp2/releases/download/v$NGHTTP2_VERSION/nghttp2-$NGHTTP2_VERSION.tar.gz -o "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz" || fail "Failed to download nghttp2"
-    tar -xvf "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract nghttp2"
-    rm "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION.tar.gz"
-fi
-
-cd "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
-
-./configure \
-    PKG_CONFIG_LIBDIR="$OUT_PATH/lib/pkgconfig" \
-    LDFLAGS="-fPIE -pie -L$OUT_PATH/lib" \
-    CPPFLAGS="-fPIE -I$OUT_PATH/include" \
+./Configure android-$ARCH \
+    -D__ANDROID_API__=$SDK_VER \
     --prefix="$OUT_PATH" \
-    --host=$HOST \
-    --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
-    --disable-shared \
-    --disable-examples \
-    --without-systemd \
-    --without-jemalloc \
-    --enable-lib-only || fail "Failed to configure nghttp2"
+    no-shared || fail "Failed to configure openssl"
 
 make clean
-make -j$CORES || fail "Failed to build nghttp2"
-make install || fail "Failed to install nghttp2"
-
-# Build nghttp3
-
-if [ ! -d "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION" ]; then
-    curl -L https://github.com/ngtcp2/nghttp3/releases/download/v$NGHTTP3_VERSION/nghttp3-$NGHTTP3_VERSION.tar.gz -o "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION.tar.gz" || fail "Failed to download nghttp3"
-    tar -xvf "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract nghttp3"
-    rm "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION.tar.gz"
-fi
-
-cd "$DEPS_PATH/nghttp3-$NGHTTP3_VERSION"
-
-autoreconf -i
-
-./configure --prefix="$OUT_PATH" \
-    --host=$HOST \
-    --enable-lib-only \
-    --disable-shared || fail "Failed to configure nghttp3"
-
-make clean
-make -j$CORES || fail "Failed to build nghttp3"
-make install || fail "Failed to install nghttp3"
-
-# Build ngtcp2
-
-if [ ! -d "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION" ]; then
-    curl -L https://github.com/ngtcp2/ngtcp2/releases/download/v$NGTCP2_VERSION/ngtcp2-$NGTCP2_VERSION.tar.gz -o "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION.tar.gz" || fail "Failed to download ngtcp2"
-    tar -xvf "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract ngtcp2"
-    rm "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION.tar.gz"
-fi
-
-cd "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION"
-
-autoreconf -i
-
-./configure \
-    PKG_CONFIG_PATH=$OUT_PATH/lib/pkgconfig \
-    BORINGSSL_LIBS="-L$OUT_PATH/lib -lssl -lcrypto" \
-    BORINGSSL_CFLAGS="-I$OUT_PATH/include" \
-    LIBNGHTTP3_LIBS="-L$OUT_PATH/lib -lnghttp3" \
-    LIBNGHTTP3_CFLAGS="-I$OUT_PATH/include" \
-    --prefix="$OUT_PATH" \
-    --host=$HOST \
-    --with-libnghttp3 \
-    --with-boringssl \
-    --enable-lib-only \
-    --disable-shared || fail "Failed to configure ngtcp2"
-
-make clean
-make -j$CORES || fail "Failed to build ngtcp2"
-make install || fail "Failed to install ngtcp2"
+make -j$CORES || fail "Failed to build openssl"
+make install_sw || fail "Failed to install openssl"
 
 # Build curl
 
@@ -275,20 +190,31 @@ cd "$BUILD_PATH/curl"
     --with-zlib="$OUT_PATH" \
     --without-libpsl \
     --with-ssl="$OUT_PATH" \
-    --with-nghttp2="$OUT_PATH" \
-    --with-nghttp3="$OUT_PATH" \
-    --with-ngtcp2="$OUT_PATH" \
-    --with-ca-bundle="/system/etc/security/cacert.pem" \
-    --with-ca-path="/system/etc/security/cacerts" \
     --with-pic \
     --enable-ipv6 \
-    --enable-pthreads \
     --enable-unix-sockets \
-    --enable-websockets \
-    --enable-ech \
+    --enable-tls-srp \
     --disable-ldap \
     --disable-ldaps \
+    --disable-dict \
+    --disable-gopher \
+    --disable-imap \
+    --disable-smtp \
+    --disable-rtsp \
+    --disable-telnet \
+    --disable-tftp \
+    --disable-pop3 \
+    --disable-mqtt \
+    --disable-ftp \
+    --disable-smb \
+    --enable-static \
     --disable-shared || fail "Failed to configure curl"
+# --with-nghttp2="$OUT_PATH" \
+# --with-nghttp3="$OUT_PATH" \
+# --with-ngtcp2="$OUT_PATH" \
+# --enable-ech \
+# --with-ca-bundle="/system/etc/security/cacert.pem" \
+# --with-ca-path="/system/etc/security/cacerts" \
 
 make clean
 make -j$CORES || fail "Failed to build curl"
@@ -297,13 +223,9 @@ make install || fail "Failed to install curl"
 echo "Build completed successfully"
 
 # print versions
-rm -f "version.txt"
-cat >"version.txt" <<EOF
+rm -f "$OUT_PATH/version.txt"
+cat >"$OUT_PATH/version.txt" <<EOF
 ZLIB version: $ZLIB_VERSION
-PSL version: $PSL_VERSION
-BORINGSSL version: $BORINGSSL_VERSION
-NGHTTP2 version: $NGHTTP2_VERSION
-NGHTTP3 version: $NGHTTP3_VERSION
-NGTCP2 version: $NGTCP2_VERSION
+OPENSSL version: $OPENSSL_VERSION
 CURL version: $CURL_VERSION
 EOF
