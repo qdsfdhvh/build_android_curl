@@ -167,7 +167,11 @@ fi
 
 cd "$DEPS_PATH/libpsl-$PSL_VERSION"
 
-meson setup --prefix="$OUT_PATH" --buildtype=release --cross-file "$MESON_PATH/$HOST.txt" build || fail "Failed to configure psl"
+meson setup --prefix="$OUT_PATH" \
+    --buildtype=release \
+    --cross-file "$MESON_PATH/$HOST.txt" \
+    --default-library=static \
+    build || fail "Failed to configure psl"
 
 ninja -C build clean
 ninja -C build -j$CORES || fail "Failed to build psl"
@@ -188,11 +192,11 @@ cmake -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
     -DANDROID_ABI=$ABI \
     -DANDROID_PLATFORM=android-$SDK_VER \
-    -DCMAKE_POSITION_INDEPENDENT_CODE=on \
+    -DBUILD_SHARED_LIBS=ON \
     -GNinja -B build || fail "Failed to configure boringssl"
 
 ninja -C build clean
-ninja -C build || fail "Failed to build boringssl"
+ninja -C build -j$CORES || fail "Failed to build boringssl"
 ninja -C build install || fail "Failed to install boringssl"
 
 # Build nghttp2
@@ -205,17 +209,18 @@ fi
 
 cd "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
 
-./Configure --prefix="$OUT_PATH" \
+./Configure \
+    PKG_CONFIG_LIBDIR="$OUT_PATH/lib/pkgconfig" \
+    LDFLAGS="-fPIE -pie -L$OUT_PATH/lib" \
+    CPPFLAGS="-fPIE -I$OUT_PATH/include" \
+    --prefix="$OUT_PATH" \
     --host=$HOST \
     --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
     --disable-shared \
     --disable-examples \
     --without-systemd \
     --without-jemalloc \
-    --enable-lib-only \
-    CPPFLAGS="-fPIE -I$OUT_PATH/include" \
-    PKG_CONFIG_LIBDIR="$OUT_PATH/lib/pkgconfig" \
-    LDFLAGS="-fPIE -pie -L$OUT_PATH/lib" || fail "Failed to configure nghttp2"
+    --enable-lib-only || fail "Failed to configure nghttp2"
 
 make clean
 make -j$CORES || fail "Failed to build nghttp2"
@@ -235,7 +240,8 @@ autoreconf -i
 
 ./configure --prefix="$OUT_PATH" \
     --host=$HOST \
-    --enable-lib-only || fail "Failed to configure nghttp3"
+    --enable-lib-only \
+    --disable-shared || fail "Failed to configure nghttp3"
 
 make clean
 make -j$CORES || fail "Failed to build nghttp3"
@@ -253,13 +259,18 @@ cd "$DEPS_PATH/ngtcp2-$NGTCP2_VERSION"
 
 autoreconf -i
 
-./configure --prefix="$OUT_PATH" \
-    --host=$HOST \
-    --enable-lib-only \
-    PKG_CONFIG_PATH="$OUT_PATH/lib/pkgconfig" \
+./configure \
+    PKG_CONFIG_PATH=$OUT_PATH/lib/pkgconfig \
     BORINGSSL_LIBS="-L$OUT_PATH/lib -lssl -lcrypto" \
     BORINGSSL_CFLAGS="-I$OUT_PATH/include" \
-    --with-boringssl || fail "Failed to configure ngtcp2"
+    LIBNGHTTP3_LIBS="-L$OUT_PATH/lib -lnghttp3" \
+    LIBNGHTTP3_CFLAGS="-I$OUT_PATH/include" \
+    --prefix="$OUT_PATH" \
+    --host=$HOST \
+    --with-libnghttp3 \
+    --with-boringssl \
+    --enable-lib-only \
+    --disable-shared || fail "Failed to configure ngtcp2"
 
 make clean
 make -j$CORES || fail "Failed to build ngtcp2"
@@ -295,3 +306,17 @@ cd "$BUILD_PATH/curl"
 make clean
 make -j$CORES || fail "Failed to build curl"
 make install || fail "Failed to install curl"
+
+echo "Build completed successfully"
+
+# print versions
+rm -f "version.txt"
+cat > "version.txt" <<EOF
+ZLIB version: $ZLIB_VERSION
+PSL version: $PSL_VERSION
+BORINGSSL version: $BORINGSSL_VERSION
+NGHTTP2 version: $NGHTTP2_VERSION
+NGHTTP3 version: $NGHTTP3_VERSION
+NGTCP2 version: $NGTCP2_VERSION
+CURL version: $CURL_VERSION
+EOF

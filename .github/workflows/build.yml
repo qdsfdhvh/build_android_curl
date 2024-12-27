@@ -2,6 +2,8 @@ name: build curl
 
 on:
   push:
+    branches:
+      - trunk
     tags:
       - "v*"
     paths-ignore:
@@ -43,6 +45,8 @@ jobs:
         with:
           name: curl-android-${{ matrix.arch }}
           path: |
+            version.txt
             out/**/include/**/*.h
             out/**/lib/*.a
             out/**/lib/*.so
+          if-no-files-found: error
