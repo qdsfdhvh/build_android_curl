@@ -150,7 +150,7 @@ if [ ! -d "$DEPS_PATH/zlib-$ZLIB_VERSION" ]; then
 fi
 
 cd "$DEPS_PATH/zlib-$ZLIB_VERSION"
- 
+
 export CHOST=$HOST
 ./configure --prefix="$OUT_PATH" || fail "Failed to configure zlib"
 
@@ -160,23 +160,22 @@ make install || fail "Failed to install zlib"
 
 # Build psl
 
-if [ ! -d "$DEPS_PATH/libpsl-$PSL_VERSION" ]; then
-    curl -L https://github.com/rockdaboot/libpsl/releases/download/$PSL_VERSION/libpsl-$PSL_VERSION.tar.gz -o "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to download psl"
-    tar -zxf "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract psl"
-    rm "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to remove psl"
-fi
+# if [ ! -d "$DEPS_PATH/libpsl-$PSL_VERSION" ]; then
+#     curl -L https://github.com/rockdaboot/libpsl/releases/download/$PSL_VERSION/libpsl-$PSL_VERSION.tar.gz -o "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to download psl"
+#     tar -zxf "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract psl"
+#     rm "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to remove psl"
+# fi
 
-cd "$DEPS_PATH/libpsl-$PSL_VERSION"
+# cd "$DEPS_PATH/libpsl-$PSL_VERSION"
 
-meson setup --prefix="$OUT_PATH" \
-    --buildtype=release \
-    --cross-file "$MESON_PATH/$HOST.txt" \
-    --default-library=static \
-    build || fail "Failed to configure psl"
+# meson setup --prefix="$OUT_PATH" \
+#     --buildtype=release \
+#     --cross-file "$MESON_PATH/$HOST.txt" \
+#     build || fail "Failed to configure psl"
 
-ninja -C build clean
-ninja -C build -j$CORES || fail "Failed to build psl"
-ninja -C build install || fail "Failed to install psl"
+# ninja -C build clean
+# ninja -C build -j$CORES || fail "Failed to build psl"
+# ninja -C build install || fail "Failed to install psl"
 
 # Build boringssl
 
@@ -294,7 +293,7 @@ cd "$BUILD_PATH/curl"
 ./configure --prefix="$OUT_PATH" \
     --host=$HOST \
     --with-zlib="$OUT_PATH" \
-    --with-libpsl="$OUT_PATH" \
+    --without-libpsl \
     --with-ssl="$OUT_PATH" \
     --with-nghttp2="$OUT_PATH" \
     --with-nghttp3="$OUT_PATH" \
@@ -312,7 +311,7 @@ echo "Build completed successfully"
 
 # print versions
 rm -f "version.txt"
-cat > "version.txt" <<EOF
+cat >"version.txt" <<EOF
 ZLIB version: $ZLIB_VERSION
 PSL version: $PSL_VERSION
 BORINGSSL version: $BORINGSSL_VERSION
