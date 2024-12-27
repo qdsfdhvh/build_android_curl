@@ -282,6 +282,10 @@ cd "$BUILD_PATH/curl"
     --with-ca-path="/system/etc/security/cacerts" \
     --with-pic \
     --enable-ipv6 \
+    --enable-pthreads \
+    --enable-unix-sockets \
+    --enable-websockets \
+    --enable-ech \
     --disable-ldap \
     --disable-ldaps \
     --disable-shared || fail "Failed to configure curl"
