@@ -189,7 +189,7 @@ fi
 
 cd "$DEPS_PATH/nghttp2-$NGHTTP2_VERSION"
 
-./Configure \
+./configure \
     PKG_CONFIG_LIBDIR="$OUT_PATH/lib/pkgconfig" \
     LDFLAGS="-fPIE -pie -L$OUT_PATH/lib" \
     CPPFLAGS="-fPIE -I$OUT_PATH/include" \
