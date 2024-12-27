@@ -8,7 +8,6 @@ ROOT=$PWD
 SDK_VER=21
 
 ZLIB_VERSION="1.3.1"
-PSL_VERSION="0.21.5"
 BORINGSSL_VERSION="0.20241209.0"
 NGHTTP2_VERSION="1.64.0"
 NGHTTP3_VERSION="1.7.0"
@@ -158,25 +157,6 @@ make clean
 make -j$CORES || fail "Failed to build zlib"
 make install || fail "Failed to install zlib"
 
-# Build psl
-
-# if [ ! -d "$DEPS_PATH/libpsl-$PSL_VERSION" ]; then
-#     curl -L https://github.com/rockdaboot/libpsl/releases/download/$PSL_VERSION/libpsl-$PSL_VERSION.tar.gz -o "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to download psl"
-#     tar -zxf "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" -C "$DEPS_PATH" || fail "Failed to extract psl"
-#     rm "$DEPS_PATH/psl-$PSL_VERSION.tar.gz" || fail "Failed to remove psl"
-# fi
-
-# cd "$DEPS_PATH/libpsl-$PSL_VERSION"
-
-# meson setup --prefix="$OUT_PATH" \
-#     --buildtype=release \
-#     --cross-file "$MESON_PATH/$HOST.txt" \
-#     build || fail "Failed to configure psl"
-
-# ninja -C build clean
-# ninja -C build -j$CORES || fail "Failed to build psl"
-# ninja -C build install || fail "Failed to install psl"
-
 # Build boringssl
 
 if [ ! -d "$DEPS_PATH/boringssl-$BORINGSSL_VERSION" ]; then
@@ -301,6 +281,9 @@ cd "$BUILD_PATH/curl"
     --with-ca-bundle="/system/etc/security/cacert.pem" \
     --with-ca-path="/system/etc/security/cacerts" \
     --with-pic \
+    --enable-ipv6 \
+    --disable-ldap \
+    --disable-ldaps \
     --disable-shared || fail "Failed to configure curl"
 
 make clean
