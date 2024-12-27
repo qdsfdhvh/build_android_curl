@@ -150,8 +150,9 @@ if [ ! -d "$DEPS_PATH/zlib-$ZLIB_VERSION" ]; then
 fi
 
 cd "$DEPS_PATH/zlib-$ZLIB_VERSION"
-
-CHOST=$HOST ./configure --prefix="$OUT_PATH" || fail "Failed to configure zlib"
+ 
+export CHOST=$HOST
+./configure --prefix="$OUT_PATH" || fail "Failed to configure zlib"
 
 make clean
 make -j$CORES || fail "Failed to build zlib"
