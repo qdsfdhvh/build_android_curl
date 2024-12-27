@@ -40,7 +40,7 @@ fi
 case $ARCH in
 armv7)
     ABI="armeabi-v7a"
-    HOST="arm-linux-androideabi"
+    HOST="armv7a-linux-androideabi"
     ;;
 arm64)
     ABI="arm64-v8a"
